@@ -6,7 +6,7 @@ from gnucash import Session,Split, GncNumeric, Account, ACCT_TYPE_TRADING, ACCT_
 
 ZERO = Decimal(0)
 
-class SankeyAccount():
+class GnucashInterface():
 
     """Documentation for ClassName
 
