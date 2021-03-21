@@ -2,7 +2,7 @@
 from decimal import Decimal
 from math import log10
 from datetime import date, datetime, timedelta
-from gnucash import Session,Split, GncNumeric, Account, ACCT_TYPE_TRADING, ACCT_TYPE_EXPENSE, ACCT_TYPE_INCOME
+from gnucash import Session,Split, GncNumeric, Account, ACCT_TYPE_TRADING, ACCT_TYPE_EXPENSE, ACCT_TYPE_INCOME, SessionOpenMode 
 
 ZERO = Decimal(0)
 
@@ -11,12 +11,12 @@ class GnucashInterface():
     """Documentation for ClassName
 
     """
-    def __init__(self,file):
+    def __init__(self,file,_income_acc,_expense_acc,_equity_acc):
         self.deep_level = 1
-        self.income_name = "Income"
-        self.expense_name = "Expenses"
-        self.equity_name = "Equity"
-        self.session = Session(file, True, False, False)
+        self.income_name = _income_acc
+        self.expense_name = _expense_acc
+        self.equity_name = _equity_acc
+        self.session = Session(file, mode=SessionOpenMode.SESSION_READ_ONLY)
         self.root = self.session.book.get_root_account()
         self.book = self.session.book
         self.id_map = {}
@@ -94,6 +94,8 @@ class GnucashInterface():
 
     def get_account_level(self,account,level):
         out_val = []
+        if account == None:
+            return out_val
         if level == 0:
             return []
         chlds_inc = account.get_children()
@@ -106,11 +108,11 @@ class GnucashInterface():
                     out_val = out_val + out_chld
         return out_val
 
-    def get_expenses(self):
-        return self.get_account_level(self.root.lookup_by_name(self.expense_name),4)
+    def get_expenses(self,depth_level):
+        return self.get_account_level(self.root.lookup_by_name(self.expense_name),depth_level)
 
-    def get_income(self):
-        return self.get_account_level(self.root.lookup_by_name(self.income_name),4)
+    def get_income(self,depth_level):
+        return self.get_account_level(self.root.lookup_by_name(self.income_name),depth_level)
 
     def get_income_account(self):
         return self.root.lookup_by_name(self.income_name)
