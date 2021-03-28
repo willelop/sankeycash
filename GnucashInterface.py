@@ -21,20 +21,28 @@ class GnucashInterface():
         self.book = self.session.book
         self.id_map = {}
         self.id_names = []
+        self.id_names_short = []
         self.generate_ids()
+        self.assess_datetime = datetime.today()
+        self.assess_period = 'month'
 
     def generate_ids(self):
         cnt = 0
         self.id_map[self.root.get_full_name()] = cnt
         self.id_names.append(self.root.get_full_name())
+        self.id_names_short.append(self.root.GetName())
         desc = self.root.get_descendants()
         for test in desc:
             cnt += 1
             self.id_map[test.get_full_name()] = cnt
             self.id_names.append(test.get_full_name())
+            self.id_names_short.append(test.GetName())
 
-    def get_account_names(self):
-        return self.id_names
+    def get_account_names(self,use_short: bool):
+        if use_short:
+            return self.id_names_short
+        else:
+            return self.id_names
 
     def get_root_commodity(self):
         return self.root.GetCommodity()
@@ -60,10 +68,11 @@ class GnucashInterface():
 
     """ get_flow """
     def get_flow(self, account):
-        return self.gnc_numeric_to_python_Decimal(Account.GetBalanceChangeForPeriod(account,datetime(2021,2,1),datetime(2021,3,1),True))
+        date_start,date_end = self.get_period_limits()
+        return self.gnc_numeric_to_python_Decimal(Account.GetBalanceChangeForPeriod(account,date_start,date_end,True))
 
     def get_balance(self, account):
-        return self.gnc_numeric_to_python_Decimal(Account.GetBalanceInCurrency(account,self.get_root_commodity(),True))
+        return self.gnc_numeric_to_python_Decimal(Account.GetBalanceAsOfDateInCurrency(account,self.assess_datetime,self.get_root_commodity(),True))
 
     def get_childrenflows(self, account):
         sk_flows = []
@@ -101,6 +110,7 @@ class GnucashInterface():
         chlds_inc = account.get_children()
         for acc in chlds_inc:
             flow = self.get_flow(acc)
+            print(acc.get_full_name() + " " + str(flow))
             if flow != 0:
                 out_val.append(acc)
                 out_chld = self.get_account_level(acc, level-1)
@@ -130,3 +140,30 @@ class GnucashInterface():
                 acc.get_current_depth() <= depth_level) :
                 output.append(acc)       
         return output
+    
+    def set_assessment_period(self, period:str):
+        self.assess_period = period
+
+    def set_assessment_datetime(self, date_time: str):
+        if date_time == "current":
+            self.assess_datetime = datetime.today()
+        else:
+            parts = date_time.split('.')
+            self.assess_datetime = datetime(int(parts[2]),int(parts[1]),int(parts[0]))
+
+    def get_period_limits(self):
+        if(self.assess_period == "month"):
+            start = datetime(self.assess_datetime.year,self.assess_datetime.month,1)
+            end = datetime(self.assess_datetime.year,self.assess_datetime.month+1,1)
+        elif self.assess_period == "year":
+            start = datetime(self.assess_datetime.year,1,1)
+            end = datetime(self.assess_datetime.year+1,1,1)
+        return start,end
+
+    def get_period_string(self):
+        start,end = self.get_period_limits()
+        start_str = start.strftime("%d.%m.%Y") 
+        end_str = end.strftime("%d.%m.%Y")
+        return start_str + " to " + end_str
+    
+
